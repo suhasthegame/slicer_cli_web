@@ -112,7 +112,7 @@ def findLocalImage(client, name):
         return None
     return image.id
 
-
+#
 def jobPullAndLoad(job):
     """
     Attempts to cache metadata on images in the pull list and load list.
@@ -140,16 +140,16 @@ def jobPullAndLoad(job):
         errorState = False
 
         notExistSet = set()
-        try:
-            docker_client = docker.from_env(version='auto')
+        # try:
+        #     docker_client = docker.from_env(version='auto')
 
-        except docker.errors.DockerException as err:
-            logger.exception('Could not create the docker client')
-            job = Job().updateJob(
-                job,
-                log='Failed to create the Docker Client\n' + str(err) + '\n',
-            )
-            raise DockerImageError('Could not create the docker client')
+        # except docker.errors.DockerException as err:
+        #     logger.exception('Could not create the docker client')
+        #     job = Job().updateJob(
+        #         job,
+        #         log='Failed to create the Docker Client\n' + str(err) + '\n',
+        #     )
+        #     raise DockerImageError('Could not create the docker client')
 
         pullList = [
             name for name in loadList
