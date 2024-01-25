@@ -25,6 +25,7 @@ from girder.models.folder import Folder
 from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
+from .singularity.job import is_singularity_installed,find_local_singularity_image
 
 from .models import DockerImageError, DockerImageItem, DockerImageNotFoundError
 
@@ -112,7 +113,6 @@ def findLocalImage(client, name):
         return None
     return image.id
 
-#
 def jobPullAndLoad(job):
     """
     Attempts to cache metadata on images in the pull list and load list.
@@ -150,10 +150,15 @@ def jobPullAndLoad(job):
         #         log='Failed to create the Docker Client\n' + str(err) + '\n',
         #     )
         #     raise DockerImageError('Could not create the docker client')
-
+        try:
+            is_singularity_installed()
+        except:
+            logger.exception('Singularity is not available. Please try after installing singularity')
+            raise Exception(f'Singularity is not available. Please try after installing singularity')
+        
         pullList = [
             name for name in loadList
-            if not findLocalImage(docker_client, name) or
+            if not find_local_singularity_image(name) or
             str(job['kwargs'].get('pull')).lower() == 'true']
         loadList = [name for name in loadList if name not in pullList]
 
