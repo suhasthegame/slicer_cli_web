@@ -25,7 +25,7 @@ from girder.models.folder import Folder
 from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
-from .singularity.job import is_singularity_installed,find_local_singularity_image
+from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif
 
 from .models import DockerImageError, DockerImageItem, DockerImageNotFoundError
 
@@ -140,16 +140,6 @@ def jobPullAndLoad(job):
         errorState = False
 
         notExistSet = set()
-        # try:
-        #     docker_client = docker.from_env(version='auto')
-
-        # except docker.errors.DockerException as err:
-        #     logger.exception('Could not create the docker client')
-        #     job = Job().updateJob(
-        #         job,
-        #         log='Failed to create the Docker Client\n' + str(err) + '\n',
-        #     )
-        #     raise DockerImageError('Could not create the docker client')
         try:
             is_singularity_installed()
         except:
@@ -164,7 +154,7 @@ def jobPullAndLoad(job):
 
         try:
             stage = 'pulling'
-            pullDockerImage(docker_client, pullList)
+            pull_image_and_convert_to_sif(pullList)
         except DockerImageNotFoundError as err:
             errorState = True
             notExistSet = set(err.imageName)
@@ -226,7 +216,6 @@ def loadMetadata(job, docker_client, pullList, loadList, notExistSet):
             job = Job().updateJob(
                 job,
                 log='Image %s was pulled successfully \n' % name,
-
             )
 
             try:

@@ -3,6 +3,7 @@ from girder import logger
 import subprocess
 from .commands import SingularityCommands
 from .utils import generate_image_name_for_singularity
+from ..models import DockerImageNotFoundError
 
 def is_valid_path(path):
     """
@@ -73,3 +74,15 @@ def pull_image_and_convert_to_sif(names):
     Raises:
     If pulling of any of the images fails, the function raises an error with the list of images that failed. 
     '''
+    failedImageList  = []
+    for name in names:
+        try:
+            logger.info(f"Starting to pull image {name}")
+            pull_cmd = SingularityCommands.singularity_pull(name)
+            subprocess.run(pull_cmd,check=True)
+        except:
+            failedImageList.append(name)
+    if len(failedImageList) != 0:
+        raise DockerImageNotFoundError('Could not find multiple images ',
+                                       image_name=failedImageList)
+    
