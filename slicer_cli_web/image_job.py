@@ -25,7 +25,7 @@ from girder.models.folder import Folder
 from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
-from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif
+from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif,load_meta_data_for_singularity
 
 from .models import DockerImageError, DockerImageItem, DockerImageNotFoundError
 
@@ -134,7 +134,7 @@ def jobPullAndLoad(job):
         user = User().load(job['userId'], level=AccessType.READ)
         baseFolder = Folder().load(
             job['kwargs']['folder'], user=user, level=AccessType.WRITE, exc=True)
-
+        logger.info(f"names = {job['kwargs']['nameList']}")
         loadList = job['kwargs']['nameList']
 
         errorState = False
@@ -164,7 +164,7 @@ def jobPullAndLoad(job):
                     notExistSet) + '\n',
             )
         stage = 'metadata'
-        images, loadingError = loadMetadata(job, docker_client, pullList,
+        images, loadingError = load_meta_data_for_singularity(job, pullList,
                                             loadList, notExistSet)
         for name, cli_dict in images:
             docker_image = docker_client.images.get(name)

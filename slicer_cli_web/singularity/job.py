@@ -3,7 +3,9 @@ from girder import logger
 import subprocess
 from .commands import SingularityCommands
 from .utils import generate_image_name_for_singularity
-from ..models import DockerImageNotFoundError
+from ..models import DockerImageNotFoundError, DockerImageError
+from girder_jobs.models.job import Job
+import json
 
 def is_valid_path(path):
     """
@@ -86,3 +88,109 @@ def pull_image_and_convert_to_sif(names):
         raise DockerImageNotFoundError('Could not find multiple images ',
                                        image_name=failedImageList)
     
+def load_meta_data_for_singularity(job,pullList, loadList, notExistSet):
+    # flag to indicate an error occurred
+    errorState = False
+    images = []
+    for name in pullList:
+        if name not in notExistSet:
+            job = Job().updateJob(
+                job,
+                log=f'Image {name} was pulled successfully \n',
+            )
+
+            try:
+                cli_dict = get_cli_data_for_singularity(name, job)
+                images.append((name, cli_dict))
+                job = Job().updateJob(
+                    job,
+                    log=f'Got pulled image {name} metadata \n'
+
+                )
+            except DockerImageError as err:
+                job = Job().updateJob(
+                    job,
+                    log=f'FAILURE: Error with recently pulled image {name}\n{err}\n',
+                )
+                errorState = True
+
+    for name in loadList:
+        # create dictionary and load to database
+        try:
+            cli_dict = get_cli_data_for_singularity(name, job)
+            images.append((name, cli_dict))
+            job = Job().updateJob(
+                job,
+                log=f'Loaded metadata from pre-existing local image {name}\n'
+            )
+        except DockerImageError as err:
+            job = Job().updateJob(
+                job,
+                log=f'FAILURE: Error with recently loading pre-existing image {name}\n{err}\n',
+            )
+            errorState = True
+    return images, errorState
+
+def get_cli_data_for_singularity(name,job):
+    try:
+        #We want to mimic the behaviour of docker run <img>:<tag> --list_cli in singularity 
+        cli_dict = get_local_singularity_output(name, '--list_cli')
+        # contains nested dict
+        # {<cliname>:{type:<type>}}
+        if isinstance(cli_dict, bytes):
+            cli_dict = cli_dict.decode('utf8')
+        cli_dict = json.loads(cli_dict)
+
+        for key, info in cli_dict.items():
+            desc_type = info.get('desc-type', 'xml')
+            cli_desc = get_local_singularity_output(name, f'{key} --{desc_type}')
+
+            if isinstance(cli_desc, bytes):
+                cli_desc = cli_desc.decode('utf8')
+
+            cli_dict[key][desc_type] = cli_desc
+            job = Job().updateJob(
+                job,
+                log=f'Got image {name}, cli {key} metadata\n',
+            )
+        return cli_dict
+    except Exception as err:
+        logger.exception('Error getting %s cli data from image', name)
+        raise DockerImageError('Error getting %s cli data from image ' % (name) + str(err))
+
+
+def _get_last_workdir(imageName):
+    run_parameters = '--no-mount /cmsuf'
+    cmd = SingularityCommands.singularity_get_env(image=imageName,run_parameters=run_parameters)
+    try: 
+        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
+        res = res.stdout
+        if isinstance(res,bytes):
+            res = res.decode('utf-8').strip()
+        entry_path_line = next((line for line in res.split('\n') if 'entry_path' in line), None)
+        pwd = ''
+        if entry_path_line:
+            # Extract the value after '='
+            pwd = entry_path_line.split('=')[1].strip()
+        return pwd
+    except Exception as e:
+        raise logger.exception(f'Error occured {e}')
+
+def get_local_singularity_output(imgName, cmdArg:str):
+    """
+    This function is used to run the singularity command locally for non-resource intensive tasks such as getting schema, environment variables and so on and return that output to the calling function 
+    """
+    try:
+        pwd = _get_last_workdir(imgName)
+        if not pwd:
+            logger.exception(f'Please set the entry_path env variable on the Docker Image')
+            raise Exception(f'Please set the entry_path env variable on the Docker Image')
+        run_parameters = f'--pwd {pwd}'
+        cmd = SingularityCommands.singualrity_run(imgName,run_parameters=run_parameters,container_args=cmdArg)
+        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
+        return res.stdout
+    except Exception as e:
+        raise Exception(f'error occured {e}')
+
+        
+
