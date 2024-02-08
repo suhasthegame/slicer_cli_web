@@ -1,4 +1,6 @@
 from .utils import generate_image_name_for_singularity
+import subprocess
+from girder import logger
 class SingularityCommands:
     @staticmethod
     def singularity_version():
@@ -44,3 +46,29 @@ class SingularityCommands:
         cmd.append(sif_name)
         cmd.append('env')
         return cmd
+    
+    @staticmethod
+    def singularity_inspect(imageName, option='-l',json_format=True):
+        '''
+        This function is used to get the singularity command for inspecting the sif file. By default, it inspects the labels in a json format,
+        but you can you any option allowed by singularity by setting the option flag appropriately and also the json flag is set to True by default.
+        '''
+        sif_name = generate_image_name_for_singularity(imageName)
+        cmd = ['singularity','inspect']
+        if json_format:
+            cmd.append('--json')
+        cmd.append(option)
+        cmd.append(sif_name)
+        return cmd
+
+
+def run_command(cmd):
+    try:
+        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True)
+        if isinstance(res.stdout,bytes):
+            res = res.stdout.decode('utf-8')
+        res = res.strip()
+        return res
+    except Exception as e:
+        logger.exception(f'Error occured when running command {cmd} - {e}')
+        raise Exception(f'Error occured when running command {cmd} - {e}')

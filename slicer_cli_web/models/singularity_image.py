@@ -18,9 +18,9 @@ from girder.constants import AccessType
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
-
-from .parser import parse_json_desc, parse_xml_desc, parse_yaml_desc
-
+from ..singularity.commands import SingularityCommands,run_command
+from .parser import parse_json_desc, parse_xml_desc, parse_yaml_desc,sanitize_and_return_json
+from girder import logger
 
 def _split(name):
     """
@@ -32,17 +32,30 @@ def _split(name):
     return name.split('@')
 
 class SingularityImage:
+    '''
+    This class is used to produce the Singularity equivalent of the Docker Image object as part of the Python SDK. This helps us to 
+    reuse all the functions where Docker is not not directly involved rather the snapshort of the Docker Image object should suffice to perform the necessaray operations
+    '''
     def __init__(self,local_sif_file:str):
-        self.attrs = self._get_attrs_from_sif(local_sif_file)
-        self.id = self._get_image_id()
-        self.labels = self._get_labels_from_sif()
-        self.short_id = self._get_short_id()
-        self.tags = self.get_tags()
-    
-    def _get_attrs_from_sif(local_sif_file):
-        pass
-    
-    
+        self.id = None
+        self.labels = None
+        self.short_id = None
+        self.tags = None
+        self._set_all_fields(local_sif_file)
+
+    def _set_all_fields(self,local_sif_file:str):
+        inspect_labels_cmd = SingularityCommands.singularity_inspect(local_sif_file)
+        try:
+            res = run_command(inspect_labels_cmd)
+            #Convert the string labels into json format and only get the labels part from the code
+            res = sanitize_and_return_json(res)
+            self.id = res.get('id','')
+            self.labels = res
+            self.tags = res.get('tags','')
+            self.short_id = res.get('short_id','')
+        except Exception as e:
+            logger.exception(e)
+
 
 class CLIItem:
     def __init__(self, item):
@@ -158,7 +171,7 @@ class SingularityImageItem:
         if not tagFolder:
             return None
         imageFolder = folderModel.load(tagFolder['parentId'], user=user, level=AccessType.READ)
-        return DockerImageItem(imageFolder, tagFolder, user)
+        return SingularityImageItem(imageFolder, tagFolder, user)
 
     @staticmethod
     def findAllImages(user=None, baseFolder=None):
@@ -184,7 +197,7 @@ class SingularityImageItem:
             else:
                 tagFolders = folderModel.find(qt)
             for tagFolder in tagFolders:
-                images.append(DockerImageItem(imageFolder, tagFolder, user))
+                images.append(SingularityImageItem(imageFolder, tagFolder, user))
         return images
 
     @staticmethod
@@ -219,7 +232,7 @@ class SingularityImageItem:
         return removed
 
     @staticmethod
-    def _create(name, docker_image, user, baseFolder):
+    def _create(name, singularity_image_object, user, baseFolder):
         folderModel = Folder()
         fileModel = File()
 
@@ -239,24 +252,17 @@ class SingularityImageItem:
                                        creator=user, reuseExisting=True)
 
         # add docker image labels as meta data
-        labels = docker_image.labels.copy()
+        labels = singularity_image_object.labels.copy()
         if 'description' in labels:
             tag['description'] = labels['description']
             del labels['description']
         labels = {k.replace('.', '_'): v for k, v in labels.items()}
-        if 'Author' in docker_image.attrs:
-            labels['author'] = docker_image.attrs['Author']
-
-        digest = None
-        if docker_image.attrs.get('RepoDigests', []):
-            digest = docker_image.attrs['RepoDigests'][0]
-
-        labels['digest'] = digest
+        labels['digest'] = singularity_image_object.get('digest',None)
         folderModel.setMetadata(tag, labels)
 
         folderModel.setMetadata(tag, dict(slicerCLIType='tag'))
 
-        return DockerImageItem(image, tag, user)
+        return SingularityImageItem(image, tag, user)
 
     @staticmethod
     def _syncItems(image, cli_dict, user):
@@ -297,13 +303,13 @@ class SingularityImageItem:
             itemModel.remove(item)
 
     @staticmethod
-    def saveImage(name, cli_dict, docker_image, user, baseFolder):
+    def saveImage(name, cli_dict, singularity_image_object, user, baseFolder):
         """
         :param baseFolder
         :type Folder
         """
-        image = DockerImageItem._create(name, docker_image, user, baseFolder)
-        DockerImageItem._syncItems(image, cli_dict, user)
+        image = SingularityImageItem._create(name, singularity_image_object, user, baseFolder)
+        SingularityImageItem._syncItems(image, cli_dict, user)
 
         return image
 

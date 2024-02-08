@@ -193,4 +193,9 @@ def get_local_singularity_output(imgName, cmdArg:str):
         raise Exception(f'error occured {e}')
 
         
-
+def get_singularity_image_object(image):
+    '''
+    This function is used to perform the same functionality as the docker_client.images.get(img) function. 
+    '''
+    sif_name = generate_image_name_for_singularity(image)
+    Singularity

@@ -26,6 +26,7 @@ from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif,load_meta_data_for_singularity
+from .models.singularity_image import SingularityImage, SingularityImageItem
 
 from .models import DockerImageError, DockerImageItem, DockerImageNotFoundError
 
@@ -167,9 +168,9 @@ def jobPullAndLoad(job):
         images, loadingError = load_meta_data_for_singularity(job, pullList,
                                             loadList, notExistSet)
         for name, cli_dict in images:
-            docker_image = docker_client.images.get(name)
+            singularity_image_object = SingularityImage(name)
             stage = 'parsing'
-            DockerImageItem.saveImage(name, cli_dict, docker_image, user, baseFolder)
+            SingularityImageItem.saveImage(name, cli_dict, singularity_image_object, user, baseFolder)
         if errorState is False and loadingError is False:
             newStatus = JobStatus.SUCCESS
         else:

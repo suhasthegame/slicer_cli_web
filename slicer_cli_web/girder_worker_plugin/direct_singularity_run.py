@@ -1,9 +1,9 @@
 from os import R_OK, access, getenv, F_OK,chdir,system
 from os.path import abspath, basename, isfile, join
 
-from girder_worker.app import app
+from girder_worker.app import app, Task
 from girder_worker.docker.io import FDReadStreamConnector
-from girder_worker.docker.tasks import DockerTask, _docker_run
+from girder_worker.docker.tasks import SingularityTask,singularity_run, DockerTask
 from girder_worker.docker.transforms import BindMountVolume, ContainerStdOut
 from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
@@ -88,9 +88,9 @@ class DirectDockerTask(DockerTask):
 
         super().__call__(*args, **kwargs)
 
-class DirectSingularityTask(DockerTask):
-    def __call__(self,*args,**kwargs):
-        _resolve_direct_file_paths(args,kwargs)
+class DirectSingularityTask(Task):
+    def __call__(*args,**kwargs):
+        super().__call__(*args,**kwargs)
 
 def _pull_image_if_not_present(image):
     """
@@ -125,11 +125,11 @@ def run(task, **kwargs):
     if pull_image == 'if-not-present':
         kwargs['pull_image'] = not _pull_image_if_not_present(kwargs['image'])
 
-    if hasattr(task, 'job_manager'):
-        stream_connectors = kwargs.setdefault('stream_connectors', [])
-        stream_connectors.append(FDReadStreamConnector(
-            input=ContainerStdOut(),
-            output=CLIProgressCLIWriter(task.job_manager)
-        ))
+    # if hasattr(task, 'job_manager'):
+    #     stream_connectors = kwargs.setdefault('stream_connectors', [])
+    #     stream_connectors.append(FDReadStreamConnector(
+    #         input=ContainerStdOut(),
+    #         output=CLIProgressCLIWriter(task.job_manager)
+    #     ))
 
-    return _docker_run(task, **kwargs)
+    return singularity_run(task, **kwargs)
