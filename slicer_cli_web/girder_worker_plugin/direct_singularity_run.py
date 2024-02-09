@@ -92,7 +92,7 @@ class DirectSingularityTask(Task):
     def __call__(*args,**kwargs):
         super().__call__(*args,**kwargs)
 
-def _pull_image_if_not_present(image):
+def check_local_sif_image(image):
     """
     Pulls the specified Plugin image (Ususally a docker image) onto the singularity container if the image is not present
     """
@@ -100,36 +100,19 @@ def _pull_image_if_not_present(image):
     if not image:
         logger.write('Image name cannot be empty')
         return False
-    imageLoc = getenv('TEMP_DIR', '/blue/pinaki.sarder/katarichalusuhas/singularity/tmp/images')
-    if not access(imageLoc,F_OK) or not access(imageLoc,R_OK):
-        logger.write(f"The image location is not accessible via girder. Please check the permissions of the filesystem")
-    #Change the current working directory to the destination location to check for and install the docker image
-    try:
-        chdir(imageLoc)
-        if not isfile(image + '.sif'):
-            pull_cmd_fn = singularity_cmd_list(SINGULARITY_COMMANDS['PULL'])
-            pull_cmd = pull_cmd_fn(image)
-            system(pull_cmd)
-    except Exception as e:
-        logger.write(f'Error occured {e}')
-    return True
+    #Just for testing. Change it later...
+    return False
 
 
 
 
 @app.task(base=DirectSingularityTask, bind=True)
-def run(task, **kwargs):
+def run(task, *args, **kwargs):
     """Wraps singularity_run to support running singularity containers"""
 
     pull_image = kwargs.get('pull_image')
     if pull_image == 'if-not-present':
-        kwargs['pull_image'] = not _pull_image_if_not_present(kwargs['image'])
-
-    # if hasattr(task, 'job_manager'):
-    #     stream_connectors = kwargs.setdefault('stream_connectors', [])
-    #     stream_connectors.append(FDReadStreamConnector(
-    #         input=ContainerStdOut(),
-    #         output=CLIProgressCLIWriter(task.job_manager)
-    #     ))
-
-    return singularity_run(task, **kwargs)
+        kwargs['pull_image'] = not check_local_sif_image(kwargs['image'])
+    image = kwargs.get('image','')
+    logger.write('LOG!! Sending job to girder_worker!!')
+    return singularity_run(task,image,*args **kwargs)
