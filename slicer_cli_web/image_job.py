@@ -28,7 +28,7 @@ from girder_jobs.models.job import Job
 from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif,load_meta_data_for_singularity
 from .models.singularity_image import SingularityImage, SingularityImageItem
 
-from .models import DockerImageError, DockerImageItem, DockerImageNotFoundError
+from .models import DockerImageError, SingularityImageItem, DockerImageNotFoundError
 
 
 def deleteImage(job):
@@ -126,6 +126,8 @@ def jobPullAndLoad(job):
     related
     """
     stage = 'initializing'
+    logger.write('Inside Image Job')
+    logger.write('')
     try:
         job = Job().updateJob(
             job,
@@ -142,6 +144,8 @@ def jobPullAndLoad(job):
 
         notExistSet = set()
         try:
+            #Delete later...
+            logger.write('Before Singularity version check')
             is_singularity_installed()
         except:
             logger.exception('Singularity is not available. Please try after installing singularity')

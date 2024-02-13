@@ -1,4 +1,4 @@
-from .docker_image import CLIItem, DockerImageItem
+from .singularity_image import CLIItem, SingularityImageItem
 from .exceptions import DockerImageError, DockerImageNotFoundError
 
-__all__ = ('DockerImageError', 'DockerImageNotFoundError', 'DockerImageItem', 'CLIItem')
+__all__ = ('DockerImageError', 'DockerImageNotFoundError', 'SingularityImageItem', 'CLIItem')
