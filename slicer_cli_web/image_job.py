@@ -126,12 +126,12 @@ def jobPullAndLoad(job):
     related
     """
     stage = 'initializing'
-    logger.write('Inside Image Job')
-    logger.write('')
+    logger.info('Inside Image Job')
+    logger.info('')
     try:
         job = Job().updateJob(
             job,
-            log='Started to Load Docker images\n',
+            log='Started to Load Singularity images\n',
             status=JobStatus.RUNNING,
         )
         user = User().load(job['userId'], level=AccessType.READ)
@@ -145,7 +145,7 @@ def jobPullAndLoad(job):
         notExistSet = set()
         try:
             #Delete later...
-            logger.write('Before Singularity version check')
+            logger.info('Before Singularity version check')
             is_singularity_installed()
         except:
             logger.exception('Singularity is not available. Please try after installing singularity')
