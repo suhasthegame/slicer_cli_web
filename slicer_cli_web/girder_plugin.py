@@ -25,7 +25,7 @@ from girder_jobs.models.job import Job
 
 from . import worker_tools
 from .docker_resource import DockerResource
-from .models import DockerImageItem
+from .models import SingularityImageItem
 
 
 def _onUpload(event):
@@ -55,7 +55,7 @@ class SlicerCLIWebPlugin(GirderPlugin):
         except Exception:
             logger.info('Girder working is unavailable')
 
-        DockerImageItem.prepare()
+        SingularityImageItem.prepare()
 
         # resource name must match the attribute added to info[apiroot]
         resource = DockerResource('slicer_cli_web')
