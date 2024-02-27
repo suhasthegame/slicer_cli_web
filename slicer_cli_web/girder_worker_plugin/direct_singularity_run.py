@@ -3,7 +3,7 @@ from os.path import abspath, basename, isfile, join
 
 from girder_worker.app import app, Task
 from girder_worker.docker.io import FDReadStreamConnector
-from girder_worker.docker.tasks import SingularityTask,singularity_run, DockerTask
+from girder_worker.docker.tasks import singularity_run, DockerTask
 from girder_worker.docker.transforms import BindMountVolume, ContainerStdOut
 from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
