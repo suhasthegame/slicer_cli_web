@@ -30,6 +30,7 @@ def is_singularity_installed(path=None):
     bool: True if singualrity is successfully accessible on the target system. False otherwise
     """
     try:
+        logger.info('Checking path')
         if path and is_valid_path(path):
             os.chdir(path)
     except Exception:
@@ -39,8 +40,9 @@ def is_singularity_installed(path=None):
         )
     try:
         subprocess.run(SingularityCommands.singularity_version(), check=True)
+        logger.info(f"Singularity env available")
     except Exception as e:
-        logger.exception(f"Exception {e} occured")
+        logger.info(f"Exception {e} occured")
         raise Exception(f"Exception {e} occured")
 
 def find_local_singularity_image(name:str,path=''):

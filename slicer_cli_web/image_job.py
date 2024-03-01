@@ -147,9 +147,10 @@ def jobPullAndLoad(job):
             #Delete later...
             logger.info('Before Singularity version check')
             is_singularity_installed()
-        except:
-            logger.exception('Singularity is not available. Please try after installing singularity')
-            raise Exception(f'Singularity is not available. Please try after installing singularity')
+        except Exception as e:
+            logger.exception(e)
+            logger.info("Singularity check failed")
+            raise Exception(f'{e}')
         
         pullList = [
             name for name in loadList
