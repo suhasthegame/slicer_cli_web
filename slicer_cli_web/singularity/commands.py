@@ -5,9 +5,9 @@ class SingularityCommands:
     @staticmethod
     def singularity_version():
         '''
-        This method is used to check whether singularity is currently installed on the system.
+        This method is used to check whether apptainer is currently installed on the system.
         '''
-        return ['singularity','--version']
+        return ['apptainer','--version']
     
     @staticmethod
     def singularity_pull(name:str, uri:str='docker'):
@@ -18,15 +18,15 @@ class SingularityCommands:
         uri(str, optional) - If you want to pull the images from other that Dockerhub, you need to pass in that uri as a string
 
         Returns:
-        A list of strings formatted to be supplied to the subprocess module of python that handles singularity pull. 
+        A list of strings formatted to be supplied to the subprocess module of python that handles  pull. 
         '''
         sif_name = generate_image_name_for_singularity(name)
-        return ['singularity','pull',sif_name,f'{uri}://{name}']
+        return ['apptainer','pull',sif_name,f'{uri}://{name}']
     
     @staticmethod
     def singualrity_run(imageName:str,run_parameters=None,container_args=None):
         sif_name = generate_image_name_for_singularity(imageName)
-        cmd = ['singularity','run','--no-mount','/cmsuf']
+        cmd = ['apptainer','run','--no-mount','/cmsuf']
         if run_parameters:
             run_parameters = run_parameters.split(' ')
             cmd.extend(run_parameters)
@@ -39,7 +39,7 @@ class SingularityCommands:
     @staticmethod
     def singularity_get_env(image:str,run_parameters=None):
         sif_name = generate_image_name_for_singularity(image)
-        cmd = ['singularity','exec','--cleanenv']
+        cmd = ['apptainer','exec','--cleanenv']
         if run_parameters:
             run_parameters = run_parameters.split(' ')
             cmd.extend(run_parameters)
@@ -50,11 +50,11 @@ class SingularityCommands:
     @staticmethod
     def singularity_inspect(imageName, option='-l',json_format=True):
         '''
-        This function is used to get the singularity command for inspecting the sif file. By default, it inspects the labels in a json format,
-        but you can you any option allowed by singularity by setting the option flag appropriately and also the json flag is set to True by default.
+        This function is used to get the apptainer command for inspecting the sif file. By default, it inspects the labels in a json format,
+        but you can you any option allowed by apptainer by setting the option flag appropriately and also the json flag is set to True by default.
         '''
         sif_name = generate_image_name_for_singularity(imageName)
-        cmd = ['singularity','inspect']
+        cmd = ['apptainer','inspect']
         if json_format:
             cmd.append('--json')
         cmd.append(option)
