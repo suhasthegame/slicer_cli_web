@@ -54,7 +54,11 @@ class SingularityImage:
             self.tags = res.get('tags','')
             self.short_id = res.get('short_id','')
         except Exception as e:
-            logger.exception(e)
+            raise Exception(f"Failed to add metadata from Singularity Image \n {e} \n")
+    
+    #A get method to retrieve any label necessary or None, in order to avoid errors in certain portions of the code and better emulate Docker Image Object behavior
+    def get(self,label:str):
+        return self.labels.get(label,None)
 
 
 class CLIItem:
@@ -252,12 +256,12 @@ class SingularityImageItem:
                                        creator=user, reuseExisting=True)
 
         # add docker image labels as meta data
-        labels = singularity_image_object.labels.copy()
+        labels = {} if not singularity_image_object.labels else singularity_image_object.labels.copy()
         if 'description' in labels:
             tag['description'] = labels['description']
             del labels['description']
         labels = {k.replace('.', '_'): v for k, v in labels.items()}
-        labels['digest'] = singularity_image_object.get('digest',None)
+        labels['digest'] = singularity_image_object.get('digest')
         folderModel.setMetadata(tag, labels)
 
         folderModel.setMetadata(tag, dict(slicerCLIType='tag'))
