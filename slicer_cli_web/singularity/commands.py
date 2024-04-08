@@ -64,7 +64,7 @@ class SingularityCommands:
 
 def run_command(cmd):
     try:
-        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True)
+        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
         if isinstance(res.stdout,bytes):
             res = res.stdout.decode('utf-8')
         res = res.strip()
