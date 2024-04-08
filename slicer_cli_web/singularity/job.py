@@ -176,7 +176,7 @@ def _get_last_workdir(imageName):
             pwd = entry_path_line.split('=')[1].strip()
         return pwd
     except Exception as e:
-        raise logger.exception(f'Error occured {e}')
+        raise Exception(f'Error occured {e}')
 
 def get_local_singularity_output(imgName, cmdArg:str):
     """
