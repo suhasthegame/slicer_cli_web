@@ -25,6 +25,7 @@ from girder.models.folder import Folder
 from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
+from .singularity.utils import switch_to_sif_image_folder
 from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif,load_meta_data_for_singularity
 from .models.singularity_image import SingularityImage, SingularityImageItem
 
@@ -144,12 +145,8 @@ def jobPullAndLoad(job):
 
         notExistSet = set()
         try:
-            #Delete later...
-            logger.info('Before Singularity version check')
             is_singularity_installed()
         except Exception as e:
-            logger.exception(e)
-            logger.info("Singularity check failed")
             raise Exception(f'{e}')
         
         pullList = [
@@ -160,6 +157,7 @@ def jobPullAndLoad(job):
 
         try:
             stage = 'pulling'
+            switch_to_sif_image_folder()
             pull_image_and_convert_to_sif(pullList)
         except DockerImageNotFoundError as err:
             errorState = True
