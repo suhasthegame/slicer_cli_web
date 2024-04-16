@@ -47,6 +47,6 @@ def switch_to_sif_image_folder(image_path:str = ''):
     try:
         if not image_path:
             image_path = os.getenv('SIF_IMAGE_PATH')
-        os.chdir(image_path)
+        os.chdir(image_path + '/')
     except Exception as e:
         raise Exception(f"Please set the SIF_IMAGE_PATH environment variable to locate SIF images")

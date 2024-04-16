@@ -3,15 +3,15 @@ from os.path import abspath, basename, isfile, join
 
 from girder_worker.app import app, Task
 from girder_worker.docker.io import FDReadStreamConnector
-from girder_worker.docker.tasks import singularity_run, DockerTask
+from girder_worker.docker.tasks import singularity_run, SingularityTask
 from girder_worker.docker.transforms import BindMountVolume, ContainerStdOut
 from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
 from girder_worker_utils.transforms.girder_io import GirderClientTransform
 from girder import logger
-from utils.singularity_helper import SINGULARITY_COMMANDS, singularity_cmd_list
+# from utils.singularity_helper import SINGULARITY_COMMANDS, singularity_cmd_list
 
-from .cli_progress import CLIProgressCLIWriter
+# rom .cli_progress import CLIProgressCLIWriter
 
 
 def _get_basename(filename, direct_path):
@@ -74,8 +74,9 @@ def _resolve_direct_file_paths(args, kwargs):
     return extra_volumes
 
 
-class DirectDockerTask(DockerTask):
-    def __call__(self, *args, **kwargs):
+
+class DirectSingularityTask(SingularityTask):
+    def __call__(*args,**kwargs):
         extra_volumes = _resolve_direct_file_paths(args, kwargs)
         if extra_volumes:
             volumes = kwargs.setdefault('volumes', [])
@@ -85,12 +86,7 @@ class DirectDockerTask(DockerTask):
             else:
                 for extra_volume in extra_volumes:
                     volumes.update(extra_volume._repr_json_())
-
-        super().__call__(*args, **kwargs)
-
-class DirectSingularityTask(Task):
-    def __call__(*args,**kwargs):
-        super().__call__(*args,**kwargs)
+        super(SingularityTask).__call__(*args,**kwargs)
 
 def check_local_sif_image(image):
     """
@@ -106,13 +102,13 @@ def check_local_sif_image(image):
 
 
 
-@app.task(base=DirectSingularityTask, bind=True)
+@app.task(base=SingularityTask, bind=True)
 def run(task, *args, **kwargs):
     """Wraps singularity_run to support running singularity containers"""
-
-    pull_image = kwargs.get('pull_image')
-    if pull_image == 'if-not-present':
-        kwargs['pull_image'] = not check_local_sif_image(kwargs['image'])
-    image = kwargs.get('image','')
-    logger.write('LOG!! Sending job to girder_worker!!')
-    return singularity_run(task,image,*args **kwargs)
+    
+    #pull_image = kwargs.get('pull_image')
+    # if pull_image == 'if-not-present':
+    #     kwargs['pull_image'] = not check_local_sif_image(kwargs['image'])
+    # image = kwargs.get('image','')
+    #logger.write('LOG!! Sending job to girder_worker!!')
+    return singularity_run(task, **kwargs)

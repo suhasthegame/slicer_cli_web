@@ -2,7 +2,7 @@ import os
 from girder import logger
 import subprocess
 from .commands import SingularityCommands
-from .utils import generate_image_name_for_singularity
+from .utils import generate_image_name_for_singularity,switch_to_sif_image_folder
 from ..models import DockerImageNotFoundError, DockerImageError
 from girder_jobs.models.job import Job
 import json
@@ -163,6 +163,7 @@ def get_cli_data_for_singularity(name,job):
 
 def _get_last_workdir(imageName):
     run_parameters = '--no-mount /cmsuf'
+    switch_to_sif_image_folder()
     cmd = SingularityCommands.singularity_get_env(image=imageName,run_parameters=run_parameters)
     try: 
         res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)

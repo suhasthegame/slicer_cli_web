@@ -20,7 +20,6 @@ from girder.models.folder import Folder
 from girder.models.item import Item
 from ..singularity.commands import SingularityCommands,run_command
 from .parser import parse_json_desc, parse_xml_desc, parse_yaml_desc,sanitize_and_return_json
-from girder import logger
 
 def _split(name):
     """

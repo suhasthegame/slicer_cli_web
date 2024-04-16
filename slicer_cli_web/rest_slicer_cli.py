@@ -384,7 +384,6 @@ def genHandlerToRunDockerCLI(cliItem):  # noqa C901
             parameters.  No outputs are used.
         """
         from .girder_worker_plugin.direct_singularity_run import run
-
         original_params = copy.deepcopy(params)
         if hasattr(getCurrentToken, 'set'):
             getCurrentToken.set(token)
