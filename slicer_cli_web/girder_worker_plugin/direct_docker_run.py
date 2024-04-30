@@ -3,7 +3,7 @@ from os.path import abspath, basename, isfile, join
 
 from girder_worker.app import app
 from girder_worker.docker.io import FDReadStreamConnector
-# from girder_worker.docker.tasks import DockerTask
+from girder_worker.docker.tasks import DockerTask
 from girder_worker.docker.transforms import BindMountVolume, ContainerStdOut
 from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
@@ -72,19 +72,19 @@ def _resolve_direct_file_paths(args, kwargs):
     return extra_volumes
 
 
-# class DirectDockerTask(DockerTask):
-#     def __call__(self, *args, **kwargs):
-#         extra_volumes = _resolve_direct_file_paths(args, kwargs)
-#         if extra_volumes:
-#             volumes = kwargs.setdefault('volumes', [])
-#             if isinstance(volumes, list):
-#                 # list mode use
-#                 volumes.extend(extra_volumes)
-#             else:
-#                 for extra_volume in extra_volumes:
-#                     volumes.update(extra_volume._repr_json_())
+class DirectDockerTask(DockerTask):
+    def __call__(self, *args, **kwargs):
+        extra_volumes = _resolve_direct_file_paths(args, kwargs)
+        if extra_volumes:
+            volumes = kwargs.setdefault('volumes', [])
+            if isinstance(volumes, list):
+                # list mode use
+                volumes.extend(extra_volumes)
+            else:
+                for extra_volume in extra_volumes:
+                    volumes.update(extra_volume._repr_json_())
 
-#         super().__call__(*args, **kwargs)
+        super().__call__(*args, **kwargs)
 
 
 def _has_image(image):
@@ -105,19 +105,19 @@ def _has_image(image):
         client.close()
 
 
-# @app.task(base=DirectDockerTask, bind=True)
-# def run(task, **kwargs):
-#     """Wraps docker_run to support direct mount volumnes."""
+@app.task(base=DirectDockerTask, bind=True)
+def run(task, **kwargs):
+    """Wraps docker_run to support direct mount volumnes."""
 
-#     pull_image = kwargs.get('pull_image')
-#     if pull_image == 'if-not-present':
-#         kwargs['pull_image'] = not _has_image(kwargs['image'])
+    pull_image = kwargs.get('pull_image')
+    if pull_image == 'if-not-present':
+        kwargs['pull_image'] = not _has_image(kwargs['image'])
 
-#     if hasattr(task, 'job_manager'):
-#         stream_connectors = kwargs.setdefault('stream_connectors', [])
-#         stream_connectors.append(FDReadStreamConnector(
-#             input=ContainerStdOut(),
-#             output=CLIProgressCLIWriter(task.job_manager)
-#         ))
+    if hasattr(task, 'job_manager'):
+        stream_connectors = kwargs.setdefault('stream_connectors', [])
+        stream_connectors.append(FDReadStreamConnector(
+            input=ContainerStdOut(),
+            output=CLIProgressCLIWriter(task.job_manager)
+        ))
 
-#     return _docker_run(task, **kwargs)
+    return _docker_run(task, **kwargs)

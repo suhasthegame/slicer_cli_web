@@ -15,6 +15,7 @@ from girder import logger
 
 
 def _get_basename(filename, direct_path):
+    logger.info(f"Filename = {filename}, direct_path={direct_path}")
     if filename:
         return filename
     if not direct_path:
@@ -76,7 +77,7 @@ def _resolve_direct_file_paths(args, kwargs):
 
 
 class DirectSingularityTask(SingularityTask):
-    def __call__(*args,**kwargs):
+    def __call__(self,*args,**kwargs):
         extra_volumes = _resolve_direct_file_paths(args, kwargs)
         if extra_volumes:
             volumes = kwargs.setdefault('volumes', [])
@@ -86,7 +87,13 @@ class DirectSingularityTask(SingularityTask):
             else:
                 for extra_volume in extra_volumes:
                     volumes.update(extra_volume._repr_json_())
-        super(SingularityTask).__call__(*args,**kwargs)
+        
+        logger.info(f'LATER KWARGS = {kwargs}')
+        container_args = kwargs['container_args'][-3:-1]
+        for arg in container_args:
+            logger.info(f"file_name = {arg._filename}")
+            logger.info(f"file_path = {arg._direct_file_path}")
+        super().__call__(*args,**kwargs)
 
 def check_local_sif_image(image):
     """
@@ -102,13 +109,15 @@ def check_local_sif_image(image):
 
 
 
-@app.task(base=SingularityTask, bind=True)
+@app.task(base=DirectSingularityTask, bind=True)
 def run(task, *args, **kwargs):
     """Wraps singularity_run to support running singularity containers"""
-    
+    logger.info(f'KWARGS = {kwargs}')
+    logger.info(f'ARGS = {args}')
+    logger.info(f'task = {task}')
     #pull_image = kwargs.get('pull_image')
     # if pull_image == 'if-not-present':
     #     kwargs['pull_image'] = not check_local_sif_image(kwargs['image'])
     # image = kwargs.get('image','')
     #logger.write('LOG!! Sending job to girder_worker!!')
-    return singularity_run(task, **kwargs)
+    return singularity_run(task,args, kwargs)
