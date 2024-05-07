@@ -25,7 +25,7 @@ def generate_image_name_for_singularity(image_str:str):
     str - A string that is to be used for the .sif filename
     '''
     if not is_valid_image_name_format(image_str):
-        raise Exception('Not a valid image name. Please pass the image name in the format')
+        raise Exception(f'Not a valid image name. Please pass the image name in the format {image_str}')
     image_str = image_str.replace('/','_').replace(':','_')
     return f"{image_str}.sif"
 

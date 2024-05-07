@@ -9,9 +9,9 @@ from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
 from girder_worker_utils.transforms.girder_io import GirderClientTransform
 from girder import logger
-# from utils.singularity_helper import SINGULARITY_COMMANDS, singularity_cmd_list
+from ..singularity.job import _get_last_workdir,generate_image_name_for_singularity
 
-# rom .cli_progress import CLIProgressCLIWriter
+from .cli_progress import CLIProgressCLIWriter
 
 
 def _get_basename(filename, direct_path):
@@ -87,12 +87,6 @@ class DirectSingularityTask(SingularityTask):
             else:
                 for extra_volume in extra_volumes:
                     volumes.update(extra_volume._repr_json_())
-        
-        logger.info(f'LATER KWARGS = {kwargs}')
-        container_args = kwargs['container_args'][-3:-1]
-        for arg in container_args:
-            logger.info(f"file_name = {arg._filename}")
-            logger.info(f"file_path = {arg._direct_file_path}")
         super().__call__(*args,**kwargs)
 
 def check_local_sif_image(image):
@@ -110,14 +104,22 @@ def check_local_sif_image(image):
 
 
 @app.task(base=DirectSingularityTask, bind=True)
-def run(task, *args, **kwargs):
+def run(task, **kwargs):
     """Wraps singularity_run to support running singularity containers"""
-    logger.info(f'KWARGS = {kwargs}')
-    logger.info(f'ARGS = {args}')
-    logger.info(f'task = {task}')
-    #pull_image = kwargs.get('pull_image')
-    # if pull_image == 'if-not-present':
-    #     kwargs['pull_image'] = not check_local_sif_image(kwargs['image'])
-    # image = kwargs.get('image','')
-    #logger.write('LOG!! Sending job to girder_worker!!')
-    return singularity_run(task,args, kwargs)
+    image = kwargs['image']
+    kwargs['image'] = generate_image_name_for_singularity(image)
+    try:
+        pwd = _get_last_workdir(image)
+        kwargs['pwd'] = pwd
+    except Exception as e:
+        raise(e)
+    temp_directory = getenv('TMPDIR') 
+    #logger.info(f"TASK {task.request} {task.request.headers}")
+    file_obj = open(f"{temp_directory}/logs.log",'rb')
+    if hasattr(task, 'job_manager'):
+        stream_connectors = kwargs.setdefault('stream_connectors', [])
+        stream_connectors.append(FDReadStreamConnector(
+            input=file_obj,
+            output=CLIProgressCLIWriter(task.job_manager)
+        ))
+    return singularity_run(task, **kwargs)

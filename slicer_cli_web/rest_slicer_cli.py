@@ -447,7 +447,7 @@ def genHandlerToRunDockerCLI(cliItem):  # noqa C901
             girder_job_type=jobType,
             girder_job_title=jobTitle,
             girder_result_hooks=result_hooks,
-            image=cliItem.digest,
+            image=cliItem.image,
             pull_image='if-not-present',
             container_args=container_args,
             **job_kwargs

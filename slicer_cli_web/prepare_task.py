@@ -24,7 +24,7 @@ def _to_file_volume(param, model):
                                                         GirderItemIdToVolume)
     from girder_worker.girder_plugin.constants import PluginSettings
 
-    from .girder_worker_plugin.direct_docker_run import DirectGirderFileIdToVolume
+    from .girder_worker_plugin.direct_singularity_run import DirectGirderFileIdToVolume
 
     girder_type = SLICER_TYPE_TO_GIRDER_MODEL_MAP[param.typ]
 
