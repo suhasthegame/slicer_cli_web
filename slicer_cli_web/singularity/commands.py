@@ -21,7 +21,7 @@ class SingularityCommands:
         A list of strings formatted to be supplied to the subprocess module of python that handles  pull. 
         '''
         sif_name = generate_image_name_for_singularity(name)
-        return ['apptainer','pull',sif_name,f'{uri}://{name}']
+        return ['apptainer','pull','--force',sif_name,f'{uri}://{name}']
     
     @staticmethod
     def singualrity_run(imageName:str,run_parameters=None,container_args=None):

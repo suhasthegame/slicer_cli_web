@@ -17,7 +17,8 @@
 ###############################################################################
 
 import json
-
+from os import getenv, remove
+from os.path import join
 import docker
 from girder import logger
 from girder.constants import AccessType
@@ -25,8 +26,8 @@ from girder.models.folder import Folder
 from girder.models.user import User
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
-from .singularity.utils import switch_to_sif_image_folder
-from .singularity.job import is_singularity_installed,find_local_singularity_image,pull_image_and_convert_to_sif,load_meta_data_for_singularity
+from .singularity.utils import switch_to_sif_image_folder, generate_image_name_for_singularity
+from .singularity.job import is_singularity_installed,find_and_remove_local_sif_files,pull_image_and_convert_to_sif,load_meta_data_for_singularity
 from .models.singularity_image import SingularityImage, SingularityImageItem
 
 from .models import DockerImageError, SingularityImageItem, DockerImageNotFoundError
@@ -34,40 +35,28 @@ from .models import DockerImageError, SingularityImageItem, DockerImageNotFoundE
 
 def deleteImage(job):
     """
-    Deletes the docker images specified in the job from the local machine.
-    Images are forcefully removed (equivalent to docker rmi -f)
-    :param job: The job object specifying the docker images to remove from
+    Deletes the singularity images specified in the job from the local machine.
+    :param job: The job object specifying the singularity images to remove from
     the local machine
 
     """
     job = Job().updateJob(
         job,
-        log='Started to Delete Docker images\n',
+        log='Started to Delete Singularity images\n',
         status=JobStatus.RUNNING,
     )
-    docker_client = None
     try:
         deleteList = job['kwargs']['deleteList']
         error = False
-
-        try:
-            docker_client = docker.from_env(version='auto')
-
-        except docker.errors.DockerException as err:
-            logger.exception('Could not create the docker client')
-            job = Job().updateJob(
-                job,
-                log='Failed to create the Docker Client\n' + str(err) + '\n',
-                status=JobStatus.ERROR,
-            )
-            raise DockerImageError('Could not create the docker client')
-
+        sif_folder = getenv("SIF_IMAGE_PATH")
         for name in deleteList:
             try:
-                docker_client.images.remove(name, force=True)
+                name = generate_image_name_for_singularity(name)
+                filename = join(sif_folder,name)
+                remove(filename)                
 
             except Exception as err:
-                logger.exception('Failed to remove image')
+                logger.exception('Failed to remove image ',name)
                 job = Job().updateJob(
                     job,
                     log='Failed to remove image \n' + str(err) + '\n',
@@ -97,9 +86,7 @@ def deleteImage(job):
             status=JobStatus.ERROR,
 
         )
-    finally:
-        if docker_client:
-            docker_client.close()
+
 
 
 def findLocalImage(client, name):
@@ -127,8 +114,6 @@ def jobPullAndLoad(job):
     related
     """
     stage = 'initializing'
-    logger.info('Inside Image Job')
-    logger.info('')
     try:
         job = Job().updateJob(
             job,
@@ -149,11 +134,15 @@ def jobPullAndLoad(job):
         except Exception as e:
             raise Exception(f'{e}')
         
-        pullList = [
-            name for name in loadList
-            if not find_local_singularity_image(name) or
-            str(job['kwargs'].get('pull')).lower() == 'true']
-        loadList = [name for name in loadList if name not in pullList]
+        # Singularity doesn't use layers and uses caching so if we have a new version of the image with the same tag, it will not be pulled
+        # but instead the same is used from singularity cache. Therefore, we need to remove local images if new version with 
+        # same tag has to be pulled.
+        # MAKE SURE YOU'RE' NOT CONSTANTLY PULLING THE SAME VERSION OF THE IMAGE UNTIL THE ACTUAL IMAGE IS UPDATED
+        for name in loadList:
+            find_and_remove_local_sif_files(name)
+
+        pullList = loadList
+        loadList = []
 
         try:
             stage = 'pulling'

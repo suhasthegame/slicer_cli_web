@@ -196,9 +196,18 @@ def get_local_singularity_output(imgName, cmdArg:str):
         raise Exception(f'error occured {e}')
 
         
-def get_singularity_image_object(image):
-    '''
-    This function is used to perform the same functionality as the docker_client.images.get(img) function. 
-    '''
-    sif_name = generate_image_name_for_singularity(image)
-    Singularity
+def find_and_remove_local_sif_files(name:str,path=None):
+    try:
+        sif_name = generate_image_name_for_singularity(name)
+    except Exception:
+        logger.exception("There's an error with the image name. Please check again and try")
+        raise Exception("There's an error with the image name. Please check again and try")
+    if not path:
+        path = os.getenv('SIF_IMAGE_PATH', '')
+        if not is_valid_path(path):
+            logger.exception('Please provide a valid path or set the environment variable "SIF_IMAGE_PATH" and ensure the path has appropriate access')
+            raise Exception('Please provide a valid path or set the environment variable "SIF_IMAGE_PATH" and ensure the path has appropriate access')
+        filename = os.path.join(path,sif_name)
+        if os.path.exists(filename):
+            os.remove(filename)
+    

@@ -1,5 +1,5 @@
 from os import R_OK, access, getenv, F_OK,chdir,system
-from os.path import abspath, basename, isfile, join
+from os.path import abspath, basename, isfile, join, exists
 
 from girder_worker.app import app, Task
 from girder_worker.docker.io import FDReadStreamConnector
@@ -10,7 +10,7 @@ from girder_worker_utils import _walk_obj
 from girder_worker_utils.transforms.girder_io import GirderClientTransform
 from girder import logger
 from ..singularity.job import _get_last_workdir,generate_image_name_for_singularity
-
+from uuid import uuid4
 from .cli_progress import CLIProgressCLIWriter
 
 
@@ -113,9 +113,16 @@ def run(task, **kwargs):
         kwargs['pwd'] = pwd
     except Exception as e:
         raise(e)
-    temp_directory = getenv('TMPDIR') 
-    #logger.info(f"TASK {task.request} {task.request.headers}")
-    file_obj = open(f"{temp_directory}/logs.log",'rb')
+    logs_dir = getenv('LOGS') 
+    #Cahnge to reflect JOBID for logs later
+    random_file_name = str(uuid4()) + 'logs.log'
+    log_file_name = join(logs_dir,random_file_name)
+    kwargs["log_file"] = log_file_name
+    #Create file since it doesn't exist
+    if not exists(log_file_name):
+        with open(log_file_name,'x'):
+            pass
+    file_obj = open(log_file_name,'rb')
     if hasattr(task, 'job_manager'):
         stream_connectors = kwargs.setdefault('stream_connectors', [])
         stream_connectors.append(FDReadStreamConnector(
