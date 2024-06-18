@@ -114,7 +114,8 @@ def run(task, **kwargs):
     except Exception as e:
         raise(e)
     logs_dir = getenv('LOGS') 
-    #Cahnge to reflect JOBID for logs later
+    kwargs['nvidia'] = True
+    #Change to reflect JOBID for logs later
     random_file_name = str(uuid4()) + 'logs.log'
     log_file_name = join(logs_dir,random_file_name)
     kwargs["log_file"] = log_file_name
