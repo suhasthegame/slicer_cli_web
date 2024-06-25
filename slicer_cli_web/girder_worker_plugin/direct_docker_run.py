@@ -1,4 +1,4 @@
-from os import R_OK, access
+from os import R_OK, access, getenv
 from os.path import abspath, basename, isfile, join
 
 from girder_worker.app import app
@@ -49,6 +49,9 @@ class DirectGirderFileIdToVolume(GirderFileIdToVolume):
 
 class GirderApiUrl(GirderClientTransform):
     def transform(self, **kwargs):
+        instance_url = getenv("INSTANCE_URL",None)
+        if instance_url:
+            return instance_url
         return self.gc.urlBase
 
 
