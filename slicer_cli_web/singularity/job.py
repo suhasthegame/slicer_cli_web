@@ -1,9 +1,10 @@
 import os
 from girder import logger
 import subprocess
-from .commands import SingularityCommands
+from .commands import SingularityCommands,run_command
 from .utils import generate_image_name_for_singularity,switch_to_sif_image_folder
 from ..models import DockerImageNotFoundError, DockerImageError
+from ..models.parser import sanitize_and_return_json
 from girder_jobs.models.job import Job
 import json
 
@@ -164,17 +165,13 @@ def get_cli_data_for_singularity(name,job):
 def _get_last_workdir(imageName):
     run_parameters = '--no-mount /cmsuf'
     switch_to_sif_image_folder()
-    cmd = SingularityCommands.singularity_get_env(image=imageName,run_parameters=run_parameters)
+    inspect_labels_cmd = SingularityCommands.singularity_inspect(imageName)
     try: 
-        res = subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
-        res = res.stdout
-        if isinstance(res,bytes):
-            res = res.decode('utf-8').strip()
-        entry_path_line = next((line for line in res.split('\n') if 'entry_path' in line), None)
-        pwd = ''
-        if entry_path_line:
-            # Extract the value after '='
-            pwd = entry_path_line.split('=')[1].strip()
+        res = run_command(inspect_labels_cmd)
+        res = sanitize_and_return_json(res)
+        pwd = res.get('entry_path',None)
+        if not pwd:
+            raise Exception("Please set the entry_path label in Docker plugin to the last WORKDIR directive in your Dockerfile")
         return pwd
     except Exception as e:
         raise Exception(f'Error occured {e.stderr.decode()}')
