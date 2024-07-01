@@ -9,7 +9,7 @@ from girder_worker.docker.transforms.girder import GirderFileIdToVolume
 from girder_worker_utils import _walk_obj
 from girder_worker_utils.transforms.girder_io import GirderClientTransform
 from girder import logger
-from ..singularity.job import _get_last_workdir,generate_image_name_for_singularity
+from ..singularity.job import _get_last_workdir,generate_image_name_for_singularity,_is_nvidia_img
 from uuid import uuid4
 from .cli_progress import CLIProgressCLIWriter
 
@@ -114,7 +114,7 @@ def run(task, **kwargs):
     except Exception as e:
         raise(e)
     logs_dir = getenv('LOGS') 
-    kwargs['nvidia'] = True
+    kwargs['nvidia'] = _is_nvidia_img(image)
     #Change to reflect JOBID for logs later
     random_file_name = str(uuid4()) + 'logs.log'
     log_file_name = join(logs_dir,random_file_name)

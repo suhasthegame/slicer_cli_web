@@ -161,6 +161,18 @@ def get_cli_data_for_singularity(name,job):
         logger.exception('Error getting %s cli data from image', name)
         raise DockerImageError('Error getting %s cli data from image ' % (name) + str(err))
 
+def _is_nvidia_img(imageName):
+    switch_to_sif_image_folder()
+    inspect_labels_cmd = SingularityCommands.singularity_inspect(imageName)
+    try:
+        res = run_command(inspect_labels_cmd)
+        res = sanitize_and_return_json(res)
+        nvidia = res.get('com.nvidia.volumes.needed',None)
+        if not nvidia:
+            return False
+        return True
+    except Exception as e:
+        raise Exception(f'Error occured {e.stderr.decode()}')
 
 def _get_last_workdir(imageName):
     run_parameters = '--no-mount /cmsuf'
